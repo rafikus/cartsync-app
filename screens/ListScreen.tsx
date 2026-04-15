@@ -297,8 +297,8 @@ export function ListScreen({ navigation }: NativeStackScreenProps<AppStackParams
 
       {activeTab === 'Shopping' && (
         <View style={[s.bottomBar, { borderTopColor: c.borderDefault, backgroundColor: c.bgApp, paddingBottom: insets.bottom + spacing.sm }]}>
-          <Btn label="Start shopping" variant="secondary" onPress={() => navigation.navigate('StartShopping')} />
-          <Btn label="Settings" variant="secondary" onPress={() => navigation.navigate('Settings')} style={{ flex: 0, paddingHorizontal: spacing.lg }} />
+          <Btn label="Start shopping" variant="primary" onPress={() => navigation.navigate('StartShopping')} />
+          <Btn label="⚙️" variant="secondary" onPress={() => navigation.navigate('Settings')} style={{ flex: 0, paddingHorizontal: spacing.lg }} />
         </View>
       )}
     </View>

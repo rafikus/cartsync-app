@@ -69,7 +69,6 @@ export function RegisterScreen({ navigation }: NativeStackScreenProps<AuthStackP
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
-
   const submit = async () => {
     if (!name || !email || !password) return Alert.alert('Please fill in all fields');
     setLoading(true);
@@ -99,7 +98,7 @@ export function RegisterScreen({ navigation }: NativeStackScreenProps<AuthStackP
         <View style={{ height: spacing.sm }} />
         <Input value={password} onChangeText={setPassword} placeholder="Password"   secureTextEntry returnKeyType="go" onSubmitEditing={submit} />
         <View style={{ height: spacing.lg }} />
-        <Btn label="Create account" onPress={submit} loading={loading} />
+        <Btn style={{flex:0}} label="Create account" onPress={submit} loading={loading} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -142,7 +141,7 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
         <View style={{ height: spacing.sm }} />
         <Input value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry returnKeyType="go" onSubmitEditing={submit} />
         <View style={{ height: spacing.lg }} />
-        <Btn label="Sign in" onPress={submit} loading={loading} />
+        <Btn style={{flex:0}} label="Sign in" onPress={submit} loading={loading} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -199,7 +198,7 @@ export function JoinScreen({ navigation }: NativeStackScreenProps<AuthStackParam
         <View style={{ height: spacing.sm }} />
         <Input value={password} onChangeText={setPassword} placeholder="Password"   secureTextEntry returnKeyType="go" onSubmitEditing={submit} />
         <View style={{ height: spacing.lg }} />
-        <Btn label="Join list" onPress={submit} loading={loading} />
+        <Btn style={{flex:0}} label="Join list" onPress={submit} loading={loading} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

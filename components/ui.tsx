@@ -44,9 +44,9 @@ export function Btn({ label, onPress, variant = 'primary', loading, disabled, st
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#fff' : c.accent} size="small" />
+        <ActivityIndicator color={variant === 'primary' ? c.textOnAccent : c.accent} size={20} />
       ) : (
-        <Text style={[styles.btnText, { color: variant === 'primary' ? '#fff' : c.text }]}>
+        <Text style={[styles.btnText, { color: variant === 'primary' ? c.textOnAccent : c.text }]}>
           {label}
         </Text>
       )}
@@ -185,12 +185,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 11,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
     gap: spacing.sm,
   },
   btnText: {
+    position: 'absolute',
     fontSize: textSizes.md,
     fontWeight: '500',
   },

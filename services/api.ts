@@ -2,7 +2,7 @@
 import Constants from 'expo-constants';
 
 const BASE_URL: string =
-  (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? 'http://localhost:3000';
+  (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? 'http://10.0.2.2:3000';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -88,6 +88,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     try { msg = (await res.json()).message ?? msg; } catch {}
     throw new Error(msg);
   }
+
+  console.log('API', method, path, body ?? '', '=>', res.status);
 
   if (res.status === 204) return undefined as T;
   return res.json();
