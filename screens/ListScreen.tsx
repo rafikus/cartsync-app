@@ -41,14 +41,6 @@ function ItemRow({
   const c = useColors();
   const [expanded, setExpanded] = useState(false);
   const [qty, setQty] = useState(String(item.quantity));
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handlePressIn = () => {
-    pressTimer.current = setTimeout(() => setExpanded((e) => !e), 400);
-  };
-  const handlePressOut = () => {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-  };
 
   const saveQty = () => {
     const n = parseInt(qty, 10);
@@ -71,9 +63,14 @@ function ItemRow({
     >
       <Pressable
         style={s.itemMain}
-        onPress={onToggle}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+        onPress={() => {
+          if (!expanded) onToggle();
+          else {
+            saveQty();
+            setExpanded(false);
+          }
+        }}
+        onLongPress={() => setExpanded(true)}
       >
         <Checkbox checked={item.checked} />
         <Text
@@ -151,11 +148,18 @@ function ItemRow({
 
 // ── ShoppingTab ───────────────────────────────────────────────────────────────
 
+const UNITS = ["×", "g", "kg", "ml", "l"] as const;
+type Unit = (typeof UNITS)[number];
+
 function ShoppingTab({ navigation }: { navigation: any }) {
   const c = useColors();
   const { items, addItem, toggleItem, updateItem, partnerCheckingId } =
     useList();
+
   const [newName, setNewName] = useState("");
+  const [newQty, setNewQty] = useState("1");
+  const [newUnit, setNewUnit] = useState<Unit>("×");
+  const [unitOpen, setUnitOpen] = useState(false);
 
   const unchecked = items.filter((i) => !i.checked);
   const checked = items.filter((i) => i.checked);
@@ -163,9 +167,12 @@ function ShoppingTab({ navigation }: { navigation: any }) {
   const handleAdd = async () => {
     const name = newName.trim();
     if (!name) return;
+    const qty = Math.max(1, parseInt(newQty, 10) || 1);
     setNewName("");
+    setNewQty("1");
+    setNewUnit("×");
     try {
-      await addItem(name, 1, "×");
+      await addItem(name, qty, newUnit);
     } catch (e: unknown) {
       Alert.alert("Error", e instanceof Error ? e.message : "Failed");
     }
@@ -177,17 +184,17 @@ function ShoppingTab({ navigation }: { navigation: any }) {
       contentContainerStyle={{ paddingBottom: spacing["3xl"] }}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Add bar */}
-      <View style={s.addBar}>
+      {/* ── Add form ── */}
+      <View style={as.form}>
+        {/* Row 1 — item name, full width */}
         <TextInput
           value={newName}
           onChangeText={setNewName}
-          placeholder="Add an item…"
+          placeholder="Item name…"
           placeholderTextColor={c.textTertiary}
-          returnKeyType="done"
-          onSubmitEditing={handleAdd}
+          returnKeyType="next"
           style={[
-            s.addInput,
+            as.nameInput,
             {
               backgroundColor: c.bgSurface,
               borderColor: c.borderDefault,
@@ -195,13 +202,90 @@ function ShoppingTab({ navigation }: { navigation: any }) {
             },
           ]}
         />
-        <Pressable
-          onPress={handleAdd}
-          style={[s.addBtn, { backgroundColor: c.accent }]}
-        >
-          <Text style={{ color: "#fff", fontSize: 22, lineHeight: 26 }}>+</Text>
-        </Pressable>
+
+        {/* Row 2 — quantity, unit picker, add button */}
+        <View style={as.row2}>
+          {/* Quantity */}
+          <TextInput
+            value={newQty}
+            onChangeText={(v) => setNewQty(v.replace(/[^0-9]/g, ""))}
+            keyboardType="number-pad"
+            placeholder="1"
+            placeholderTextColor={c.textTertiary}
+            returnKeyType="done"
+            onSubmitEditing={handleAdd}
+            style={[
+              as.qtyInput,
+              {
+                backgroundColor: c.bgSurface,
+                borderColor: c.borderDefault,
+                color: c.text,
+              },
+            ]}
+          />
+
+          {/* Unit dropdown */}
+          <View style={{ position: "relative" }}>
+            <Pressable
+              onPress={() => setUnitOpen((o) => !o)}
+              style={[
+                as.unitBtn,
+                {
+                  backgroundColor: c.bgSurface,
+                  borderColor: unitOpen ? c.accent : c.borderDefault,
+                },
+              ]}
+            >
+              <Text style={[as.unitBtnText, { color: c.text }]}>{newUnit}</Text>
+              <Text style={[as.unitChevron, { color: c.textTertiary }]}>▾</Text>
+            </Pressable>
+
+            {unitOpen && (
+              <View
+                style={[
+                  as.dropdown,
+                  {
+                    backgroundColor: c.bgSurface,
+                    borderColor: c.borderDefault,
+                  },
+                ]}
+              >
+                {UNITS.map((u) => (
+                  <Pressable
+                    key={u}
+                    onPress={() => {
+                      setNewUnit(u);
+                      setUnitOpen(false);
+                    }}
+                    style={[
+                      as.dropdownItem,
+                      u === newUnit && { backgroundColor: c.accentSubtle },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        as.dropdownItemText,
+                        { color: u === newUnit ? c.accentText : c.text },
+                      ]}
+                    >
+                      {u}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Add button */}
+          <Pressable
+            onPress={handleAdd}
+            style={[as.addBtn, { backgroundColor: c.accent }]}
+          >
+            <Text style={as.addBtnText}>+</Text>
+          </Pressable>
+        </View>
       </View>
+
       <Text style={[s.hint, { color: c.textTertiary }]}>
         Hold an item to edit quantity
       </Text>
@@ -216,7 +300,7 @@ function ShoppingTab({ navigation }: { navigation: any }) {
 
       {unchecked.length > 0 && (
         <>
-          <SectionLabel>To get</SectionLabel>
+          <SectionLabel>{`To get (${unchecked.length})`}</SectionLabel>
           {unchecked.map((item) => (
             <ItemRow
               key={item.id}
@@ -246,7 +330,6 @@ function ShoppingTab({ navigation }: { navigation: any }) {
     </ScrollView>
   );
 }
-
 // ── HistoryTab ────────────────────────────────────────────────────────────────
 
 function HistoryTab() {
@@ -486,6 +569,60 @@ export function ListScreen({
   );
 }
 
+const as = StyleSheet.create({
+  form: { marginBottom: spacing.sm, gap: spacing.sm },
+  nameInput: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    fontSize: textSizes.md,
+  },
+  row2: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  qtyInput: {
+    width: 64,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    fontSize: textSizes.md,
+    textAlign: "center",
+  },
+  unitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    minWidth: 56,
+  },
+  unitBtnText: { fontSize: textSizes.md, fontWeight: "500" },
+  unitChevron: { fontSize: 10 },
+  dropdown: {
+    position: "absolute",
+    top: 40,
+    left: 0,
+    zIndex: 999,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    overflow: "hidden",
+    minWidth: 72,
+  },
+  dropdownItem: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  dropdownItemText: { fontSize: textSizes.md },
+  addBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: "auto",
+  },
+  addBtnText: { color: "#fff", fontSize: 22, lineHeight: 26 },
+});
+
 const s = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
   tabs: {
@@ -510,22 +647,6 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     borderTopWidth: 0.5,
-  },
-  addBar: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
-  addInput: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 0.5,
-    fontSize: textSizes.md,
-  },
-  addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
   },
   hint: {
     fontSize: textSizes.xs,
