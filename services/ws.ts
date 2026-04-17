@@ -1,19 +1,20 @@
 // src/services/ws.ts
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
 
 const WS_URL: string =
-  (Constants.expoConfig?.extra?.wsUrl as string | undefined) ?? 'ws://localhost:3000';
+  (Constants.expoConfig?.extra?.wsUrl as string | undefined) ??
+  "ws://localhost:3000";
 
 export type WsEventType =
-  | 'item:added'
-  | 'item:updated'
-  | 'item:removed'
-  | 'item:checking'
-  | 'list:updated'
-  | 'store:updated'
-  | 'trip:completed'
-  | 'ping'
-  | 'pong';
+  | "item:added"
+  | "item:updated"
+  | "item:removed"
+  | "item:checking"
+  | "list:updated"
+  | "store:updated"
+  | "trip:completed"
+  | "ping"
+  | "pong";
 
 export interface WsMessage {
   type: WsEventType;
@@ -31,7 +32,7 @@ class WsClient {
   private listId: string | null = null;
   private token: string | null = null;
 
-  onStatusChange?: (status: 'live' | 'pending' | 'offline') => void;
+  onStatusChange?: (status: "live" | "pending" | "offline") => void;
 
   connect(listId: string, token: string) {
     this.listId = listId;
@@ -58,24 +59,24 @@ class WsClient {
 
   private _open() {
     if (!this.listId || !this.token) return;
-    this.onStatusChange?.('pending');
+    this.onStatusChange?.("pending");
     const url = `${WS_URL}/ws/lists/${this.listId}?token=${encodeURIComponent(this.token)}`;
     this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {
-      this.onStatusChange?.('live');
+      this.onStatusChange?.("live");
       this._startPing();
     };
     this.socket.onmessage = (e) => {
       try {
         const msg: WsMessage = JSON.parse(e.data as string);
-        if (msg.type === 'pong') return;
+        if (msg.type === "pong") return;
         this.listeners.forEach((fn) => fn(msg));
       } catch {}
     };
     this.socket.onclose = () => {
       this._stopPing();
-      this.onStatusChange?.('offline');
+      this.onStatusChange?.("offline");
       if (!this.closing) {
         this.reconnectTimer = setTimeout(() => this._open(), 3000);
       }
@@ -91,7 +92,7 @@ class WsClient {
   }
 
   private _startPing() {
-    this.pingTimer = setInterval(() => this.send({ type: 'ping' }), 25_000);
+    this.pingTimer = setInterval(() => this.send({ type: "ping" }), 25_000);
   }
   private _stopPing() {
     if (this.pingTimer) clearInterval(this.pingTimer);

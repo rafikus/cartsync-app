@@ -31,9 +31,15 @@
         }
       ]
     ],
-    "extra": { 
-      "apiUrl": "http://10.0.2.2:3000",
-      "wsUrl": "ws://10.0.2.2:3000"
+    "extra": {
+      "apiUrl": "https://kusy.net/cartsync",
+      "wsUrl": "wss://kusy.net/cartsync",
+
+      // "apiUrl": "http://10.0.2.2:6300",
+      // "wsUrl": "ws://10.0.2.2:6300",
+      "eas": {
+        "projectId": "551040bb-1864-4199-b2a7-ba93c27d7dc5"
+      }
     }
   }
 }

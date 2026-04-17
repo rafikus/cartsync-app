@@ -1,11 +1,11 @@
 // src/navigation/index.tsx
-import React, { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuth } from '../context/AuthContext';
-import { useList } from '../context/ListContext';
-import { useColors } from '../theme';
+import React, { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useAuth } from "../context/AuthContext";
+import { useList } from "../context/ListContext";
+import { useColors } from "../theme";
 
 import {
   SplashScreen,
@@ -13,70 +13,74 @@ import {
   RegisterScreen,
   LoginScreen,
   JoinScreen,
-} from '../screens/AuthScreens';
-import { ListScreen } from '../screens/ListScreen';
+} from "../screens/AuthScreens";
+import { ListScreen } from "../screens/ListScreen";
+import {
+  ListPickerScreen,
+  CreateListScreen,
+} from "../screens/ListPickerScreen";
 import {
   StartShoppingScreen,
   ShoppingScreen,
   TripCompleteScreen,
-} from '../screens/ShoppingScreens';
-import { SettingsScreen } from '../screens/SettingsScreen';
-import type { Store } from '../services/api';
+} from "../screens/ShoppingScreens";
+import { SettingsScreen } from "../screens/SettingsScreen";
+import type { Store } from "../services/api";
 
 // ── Route param types ─────────────────────────────────────────────────────────
 
 export type AuthStackParams = {
-  Splash:    undefined;
+  Splash: undefined;
   NewOrJoin: undefined;
-  Register:  undefined;
-  Login:     undefined;
-  Join:      undefined;
+  Register: undefined;
+  Login: undefined;
+  Join: undefined;
 };
 
 export type AppStackParams = {
-  List:          undefined;
+  List: undefined;
+  ListPicker: undefined; // ← new
+  CreateList: undefined; // ← new
   StartShopping: undefined;
-  Shopping:      { store: Store | null };
-  TripComplete:  { tripId: string };
-  Settings:      undefined;
+  Shopping: { store: Store | null };
+  TripComplete: { tripId: string };
+  Settings: undefined;
 };
 
 // ── Stacks ────────────────────────────────────────────────────────────────────
 
 const AuthStack = createNativeStackNavigator<AuthStackParams>();
-const AppStack  = createNativeStackNavigator<AppStackParams>();
+const AppStack = createNativeStackNavigator<AppStackParams>();
 
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="Splash"    component={SplashScreen} />
+      <AuthStack.Screen name="Splash" component={SplashScreen} />
       <AuthStack.Screen name="NewOrJoin" component={NewOrJoinScreen} />
-      <AuthStack.Screen name="Register"  component={RegisterScreen} />
-      <AuthStack.Screen name="Login"     component={LoginScreen} />
-      <AuthStack.Screen name="Join"      component={JoinScreen} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Join" component={JoinScreen} />
     </AuthStack.Navigator>
   );
 }
 
 function AppNavigator() {
-  const { user } = useAuth();
-  const { loadList } = useList();
-
-  // Load the user's first list automatically after login
-  useEffect(() => {
-    const firstListId = user?.listIds?.[0];
-    if (firstListId) {
-      loadList(firstListId);
-    }
-  }, [user]);
-
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
-      <AppStack.Screen name="List"          component={ListScreen} />
+      <AppStack.Screen name="List" component={ListScreen} />
       <AppStack.Screen name="StartShopping" component={StartShoppingScreen} />
-      <AppStack.Screen name="Shopping"      component={ShoppingScreen} />
-      <AppStack.Screen name="TripComplete"  component={TripCompleteScreen} />
-      <AppStack.Screen name="Settings"      component={SettingsScreen} />
+      <AppStack.Screen name="Shopping" component={ShoppingScreen} />
+      <AppStack.Screen name="TripComplete" component={TripCompleteScreen} />
+      <AppStack.Screen name="Settings" component={SettingsScreen} />
+    </AppStack.Navigator>
+  );
+}
+
+function ListRequiredNavigator() {
+  return (
+    <AppStack.Navigator screenOptions={{ headerShown: false }}>
+      <AppStack.Screen name="ListPicker" component={ListPickerScreen} />
+      <AppStack.Screen name="CreateList" component={CreateListScreen} />
     </AppStack.Navigator>
   );
 }
@@ -85,11 +89,19 @@ function AppNavigator() {
 
 export function RootNavigator() {
   const { user, loading } = useAuth();
+  const { list } = useList();
   const c = useColors();
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bgApp }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: c.bgApp,
+        }}
+      >
         <ActivityIndicator color={c.accent} size="large" />
       </View>
     );
@@ -97,7 +109,15 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {user ? <AppNavigator /> : <AuthNavigator />}
+      {user ? (
+        list ? (
+          <AppNavigator />
+        ) : (
+          <ListRequiredNavigator />
+        )
+      ) : (
+        <AuthNavigator />
+      )}
     </NavigationContainer>
   );
 }
