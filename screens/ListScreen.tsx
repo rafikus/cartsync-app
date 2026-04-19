@@ -15,13 +15,7 @@ import { useList } from "../context/ListContext";
 import { useAuth } from "../context/AuthContext";
 import { useColors, spacing, radius, text as textSizes } from "../theme";
 import { Header } from "../components/Header";
-import {
-  Btn,
-  Checkbox,
-  Divider,
-  EmptyState,
-  SectionLabel,
-} from "../components/ui";
+import { Btn, Divider, EmptyState, SectionLabel } from "../components/ui";
 import type { ListItem } from "../services/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -29,13 +23,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function ItemRow({
   item,
-  isPartnerChecking,
-  onToggle,
   onUpdate,
 }: {
   item: ListItem;
-  isPartnerChecking: boolean;
-  onToggle: () => void;
   onUpdate: (qty: number) => void;
 }) {
   const c = useColors();
@@ -54,25 +44,20 @@ function ItemRow({
         s.itemRow,
         {
           backgroundColor: c.bgSurface,
-          borderColor:
-            isPartnerChecking || expanded ? c.accent : c.borderDefault,
+          borderColor: expanded ? c.accent : c.borderDefault,
         },
-        isPartnerChecking && { borderWidth: 1.5 },
-        item.checked && { opacity: 0.45 },
       ]}
     >
       <Pressable
         style={s.itemMain}
         onPress={() => {
-          if (!expanded) onToggle();
+          if (!expanded) setExpanded(true);
           else {
             saveQty();
             setExpanded(false);
           }
         }}
-        onLongPress={() => setExpanded(true)}
       >
-        <Checkbox checked={item.checked} />
         <Text
           style={[
             s.itemName,
@@ -153,8 +138,7 @@ type Unit = (typeof UNITS)[number];
 
 function ShoppingTab({ navigation }: { navigation: any }) {
   const c = useColors();
-  const { items, addItem, toggleItem, updateItem, partnerCheckingId } =
-    useList();
+  const { items, addItem, updateItem } = useList();
 
   const [newName, setNewName] = useState("");
   const [newQty, setNewQty] = useState("1");
@@ -286,10 +270,6 @@ function ShoppingTab({ navigation }: { navigation: any }) {
         </View>
       </View>
 
-      <Text style={[s.hint, { color: c.textTertiary }]}>
-        Hold an item to edit quantity
-      </Text>
-
       {unchecked.length === 0 && checked.length === 0 && (
         <EmptyState
           icon="🛒"
@@ -305,8 +285,6 @@ function ShoppingTab({ navigation }: { navigation: any }) {
             <ItemRow
               key={item.id}
               item={item}
-              isPartnerChecking={item.id === partnerCheckingId}
-              onToggle={() => toggleItem(item.id)}
               onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
             />
           ))}
@@ -320,8 +298,6 @@ function ShoppingTab({ navigation }: { navigation: any }) {
             <ItemRow
               key={item.id}
               item={item}
-              isPartnerChecking={false}
-              onToggle={() => toggleItem(item.id)}
               onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
             />
           ))}
