@@ -15,7 +15,7 @@ import { useList } from "../context/ListContext";
 import { useAuth } from "../context/AuthContext";
 import { useColors, spacing, radius, text as textSizes } from "../theme";
 import { Header } from "../components/Header";
-import { Btn, Divider, EmptyState, SectionLabel } from "../components/ui";
+import { Btn, EmptyState, SectionLabel } from "../components/ui";
 import type { ListItem } from "../services/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -75,7 +75,7 @@ function ItemRow({
           <TextInput
             ref={nameInputRef}
             value={nameValue}
-            onChangeText={setNameValue}
+            onChangeText={(v) => setNameValue(v.slice(0, 48))}
             onBlur={saveName}
             onSubmitEditing={saveName}
             selectTextOnFocus
@@ -255,12 +255,12 @@ function ItemRowExpansion({
   );
 }
 
-// ── ShoppingTab ───────────────────────────────────────────────────────────────
+// ── ChecklistTab ───────────────────────────────────────────────────────────────
 
 const UNITS = ["×", "g", "kg", "ml", "l"] as const;
 type Unit = (typeof UNITS)[number];
 
-function ShoppingTab({ navigation }: { navigation: any }) {
+function ChecklistTab({ navigation }: { navigation: any }) {
   const c = useColors();
   const { items, addItem, updateItem, removeItem } = useList();
 
@@ -269,8 +269,14 @@ function ShoppingTab({ navigation }: { navigation: any }) {
   const [newUnit, setNewUnit] = useState<Unit>("×");
   const [unitOpen, setUnitOpen] = useState(false);
 
-  const unchecked = items.filter((i) => !i.checked);
-  const checked = items.filter((i) => i.checked);
+  const unchecked = items
+    .filter((i) => !i.checked)
+    .slice()
+    .reverse();
+  const checked = items
+    .filter((i) => i.checked)
+    .slice()
+    .reverse();
 
   const handleAdd = async () => {
     const name = newName.trim();
@@ -287,17 +293,13 @@ function ShoppingTab({ navigation }: { navigation: any }) {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ paddingBottom: spacing["3xl"] }}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* ── Add form ── */}
+    <View style={{ flex: 1 }}>
+      {/* ── Add form (fixed, outside scroll) ── */}
       <View style={as.form}>
         {/* Row 1 — item name, full width */}
         <TextInput
           value={newName}
-          onChangeText={setNewName}
+          onChangeText={(v) => setNewName(v.slice(0, 48))}
           placeholder="Item name…"
           placeholderTextColor={c.textTertiary}
           returnKeyType="next"
@@ -394,46 +396,51 @@ function ShoppingTab({ navigation }: { navigation: any }) {
         </View>
       </View>
 
-      {unchecked.length === 0 && checked.length === 0 && (
-        <EmptyState
-          icon="🛒"
-          title="List is empty"
-          subtitle="Add your first item above"
-        />
-      )}
-
-      {unchecked.length > 0 && (
-        <>
-          <SectionLabel>{`To get (${unchecked.length})`}</SectionLabel>
-          {unchecked.map((item) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
-              onDelete={() => removeItem(item.id)}
-              onRename={(name) => updateItem(item.id, { name })}
-              onUnitChange={(unit) => updateItem(item.id, { unit })}
-            />
-          ))}
-        </>
-      )}
-
-      {checked.length > 0 && (
-        <>
-          <SectionLabel>{`In cart (${checked.length})`}</SectionLabel>
-          {checked.map((item) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
-              onDelete={() => removeItem(item.id)}
-              onRename={(name) => updateItem(item.id, { name })}
-              onUnitChange={(unit) => updateItem(item.id, { unit })}
-            />
-          ))}
-        </>
-      )}
-    </ScrollView>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: spacing["3xl"] }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {" "}
+        {unchecked.length === 0 && checked.length === 0 && (
+          <EmptyState
+            icon="🛒"
+            title="List is empty"
+            subtitle="Add your first item above"
+          />
+        )}
+        {unchecked.length > 0 && (
+          <>
+            <SectionLabel>{`To get (${unchecked.length})`}</SectionLabel>
+            {unchecked.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
+                onDelete={() => removeItem(item.id)}
+                onRename={(name) => updateItem(item.id, { name })}
+                onUnitChange={(unit) => updateItem(item.id, { unit })}
+              />
+            ))}
+          </>
+        )}
+        {checked.length > 0 && (
+          <>
+            <SectionLabel>{`In cart (${checked.length})`}</SectionLabel>
+            {checked.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
+                onDelete={() => removeItem(item.id)}
+                onRename={(name) => updateItem(item.id, { name })}
+                onUnitChange={(unit) => updateItem(item.id, { unit })}
+              />
+            ))}
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 // ── HistoryTab ────────────────────────────────────────────────────────────────
@@ -579,7 +586,7 @@ function SuggestionsTab() {
 
 // ── ListScreen ────────────────────────────────────────────────────────────────
 
-const TABS = ["Shopping", "History", "Suggestions"] as const;
+const TABS = ["Checklist", "History", "Suggestions"] as const;
 type Tab = (typeof TABS)[number];
 
 export function ListScreen({
@@ -589,7 +596,7 @@ export function ListScreen({
   const insets = useSafeAreaInsets();
   const { list, items, syncState } = useList();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("Shopping");
+  const [activeTab, setActiveTab] = useState<Tab>("Checklist");
 
   const partner = list?.members.find((m) => m.id !== user?.id);
   const checkedCount = items.filter((i) => i.checked).length;
@@ -642,12 +649,12 @@ export function ListScreen({
           ))}
         </View>
 
-        {activeTab === "Shopping" && <ShoppingTab navigation={navigation} />}
+        {activeTab === "Checklist" && <ChecklistTab navigation={navigation} />}
         {activeTab === "History" && <HistoryTab />}
         {activeTab === "Suggestions" && <SuggestionsTab />}
       </View>
 
-      {activeTab === "Shopping" && (
+      {activeTab === "Checklist" && (
         <View
           style={[
             s.bottomBar,
@@ -676,7 +683,7 @@ export function ListScreen({
 }
 
 const as = StyleSheet.create({
-  form: { marginBottom: spacing.sm, gap: spacing.sm },
+  form: { gap: spacing.sm, paddingBottom: spacing.sm },
   nameInput: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
