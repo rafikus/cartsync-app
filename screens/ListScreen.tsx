@@ -1,5 +1,5 @@
 // src/screens/ListScreen.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -23,19 +23,22 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function ItemRow({
   item,
+  expanded,
+  onExpand,
   onUpdate,
   onDelete,
   onRename,
   onUnitChange,
 }: {
   item: ListItem;
+  expanded: boolean;
+  onExpand: (id: string | null) => void;
   onUpdate: (qty: number) => void;
   onDelete: () => void;
   onRename: (name: string) => void;
   onUnitChange: (unit: string) => void;
 }) {
   const c = useColors();
-  const [expanded, setExpanded] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(item.name);
   const nameInputRef = useRef<TextInput>(null);
@@ -61,10 +64,8 @@ function ItemRow({
         style={s.itemMain}
         onPress={() => {
           if (editingName) return;
-          if (!expanded) setExpanded(true);
-          else {
-            setExpanded(false);
-          }
+          if (!expanded) onExpand(item.id);
+          else onExpand(null);
         }}
         onLongPress={() => {
           setEditingName(true);
@@ -132,6 +133,10 @@ function ItemRowExpansion({
     else setQty(String(item.quantity));
   };
 
+  useEffect(() => {
+    onUpdate(parseInt(qty, 10));
+  }, [qty]);
+
   return (
     <View>
       <View
@@ -152,7 +157,6 @@ function ItemRowExpansion({
           onPress={() => {
             const n = Math.max(1, parseInt(qty, 10) - 1);
             setQty(String(n));
-            onUpdate(n);
           }}
           style={[
             s.qtyBtn,
@@ -177,7 +181,6 @@ function ItemRowExpansion({
           onPress={() => {
             const n = parseInt(qty, 10) + 1;
             setQty(String(n));
-            onUpdate(n);
           }}
           style={[
             s.qtyBtn,
@@ -268,6 +271,7 @@ function ChecklistTab({ navigation }: { navigation: any }) {
   const [newQty, setNewQty] = useState("1");
   const [newUnit, setNewUnit] = useState<Unit>("×");
   const [unitOpen, setUnitOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const unchecked = items
     .filter((i) => !i.checked)
@@ -407,13 +411,11 @@ function ChecklistTab({ navigation }: { navigation: any }) {
           </Text>
         </Pressable>
       </View>
-
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: spacing["3xl"] }}
         keyboardShouldPersistTaps="handled"
       >
-        {" "}
         {unchecked.length === 0 && checked.length === 0 && (
           <EmptyState
             icon="🛒"
@@ -421,13 +423,15 @@ function ChecklistTab({ navigation }: { navigation: any }) {
             subtitle="Add your first item above"
           />
         )}
-        {unchecked.length > 0 && (
+        {unchecked.length > 0 ? (
           <>
             <SectionLabel>{`To get (${unchecked.length})`}</SectionLabel>
             {unchecked.map((item) => (
               <ItemRow
                 key={item.id}
                 item={item}
+                expanded={expandedId === item.id}
+                onExpand={setExpandedId}
                 onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
                 onDelete={() => removeItem(item.id)}
                 onRename={(name) => updateItem(item.id, { name })}
@@ -435,14 +439,16 @@ function ChecklistTab({ navigation }: { navigation: any }) {
               />
             ))}
           </>
-        )}
-        {checked.length > 0 && (
+        ) : null}
+        {checked.length > 0 ? (
           <>
             <SectionLabel>{`In cart (${checked.length})`}</SectionLabel>
             {checked.map((item) => (
               <ItemRow
                 key={item.id}
                 item={item}
+                expanded={expandedId === item.id}
+                onExpand={setExpandedId}
                 onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
                 onDelete={() => removeItem(item.id)}
                 onRename={(name) => updateItem(item.id, { name })}
@@ -450,7 +456,7 @@ function ChecklistTab({ navigation }: { navigation: any }) {
               />
             ))}
           </>
-        )}
+        ) : null}
       </ScrollView>
     </View>
   );
