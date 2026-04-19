@@ -24,9 +24,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 function ItemRow({
   item,
   onUpdate,
+  onDelete,
 }: {
   item: ListItem;
   onUpdate: (qty: number) => void;
+  onDelete: () => void;
 }) {
   const c = useColors();
   const [expanded, setExpanded] = useState(false);
@@ -75,58 +77,103 @@ function ItemRow({
       </Pressable>
 
       {expanded && (
-        <View
+        <ItemRowExpansion item={item} onUpdate={onUpdate} onDelete={onDelete} />
+      )}
+    </View>
+  );
+}
+
+function ItemRowExpansion({
+  item,
+  onUpdate,
+  onDelete,
+}: {
+  item: ListItem;
+  onUpdate: (qty: number) => void;
+  onDelete: () => void;
+}) {
+  const c = useColors();
+  const [qty, setQty] = useState(String(item.quantity));
+
+  const saveQty = () => {
+    const n = parseInt(qty, 10);
+    if (!isNaN(n) && n > 0) onUpdate(n);
+    else setQty(String(item.quantity));
+  };
+
+  return (
+    <View>
+      <View
+        style={[
+          s.qtyEditor,
+          { backgroundColor: c.bgSubtle, borderTopColor: c.borderDefault },
+        ]}
+      >
+        <Text
           style={[
-            s.qtyEditor,
-            { backgroundColor: c.bgSubtle, borderTopColor: c.borderDefault },
+            { fontSize: textSizes.xs, flex: 1 },
+            { color: c.textSecondary },
+          ]}
+        >
+          Quantity
+        </Text>
+        <Pressable
+          onPress={() => {
+            const n = Math.max(1, parseInt(qty, 10) - 1);
+            setQty(String(n));
+          }}
+          style={[
+            s.qtyBtn,
+            { backgroundColor: c.bgSurface, borderColor: c.borderStrong },
           ]}
         >
           <Text
-            style={[
-              { fontSize: textSizes.xs, flex: 1 },
-              { color: c.textSecondary },
-            ]}
+            style={[{ fontSize: 18, fontWeight: "500" }, { color: c.text }]}
           >
-            Quantity
+            −
           </Text>
-          <Pressable
-            onPress={() => {
-              const n = Math.max(1, parseInt(qty, 10) - 1);
-              setQty(String(n));
-            }}
-            style={[
-              s.qtyBtn,
-              { backgroundColor: c.bgSurface, borderColor: c.borderStrong },
-            ]}
+        </Pressable>
+        <TextInput
+          value={qty}
+          onChangeText={setQty}
+          onBlur={saveQty}
+          keyboardType="numeric"
+          style={[s.qtyInput, { color: c.text }]}
+        />
+        <Pressable
+          onPress={() => setQty((v) => String(parseInt(v, 10) + 1))}
+          style={[
+            s.qtyBtn,
+            { backgroundColor: c.bgSurface, borderColor: c.borderStrong },
+          ]}
+        >
+          <Text
+            style={[{ fontSize: 18, fontWeight: "500" }, { color: c.text }]}
           >
-            <Text
-              style={[{ fontSize: 18, fontWeight: "500" }, { color: c.text }]}
-            >
-              −
-            </Text>
-          </Pressable>
-          <TextInput
-            value={qty}
-            onChangeText={setQty}
-            onBlur={saveQty}
-            keyboardType="numeric"
-            style={[s.qtyInput, { color: c.text }]}
-          />
-          <Pressable
-            onPress={() => setQty((v) => String(parseInt(v, 10) + 1))}
-            style={[
-              s.qtyBtn,
-              { backgroundColor: c.bgSurface, borderColor: c.borderStrong },
-            ]}
-          >
-            <Text
-              style={[{ fontSize: 18, fontWeight: "500" }, { color: c.text }]}
-            >
-              +
-            </Text>
-          </Pressable>
-        </View>
-      )}
+            +
+          </Text>
+        </Pressable>
+      </View>
+      <View
+        style={[
+          s.qtyEditor,
+          {
+            backgroundColor: c.bgSubtle,
+            borderTopColor: c.borderDefault,
+            justifyContent: "flex-end",
+          },
+        ]}
+      >
+        <Pressable
+          onPress={onDelete}
+          style={[
+            s.qtyBtn,
+            { backgroundColor: c.danger, borderColor: c.borderStrong },
+          ]}
+        >
+          <Text style={{ fontSize: 16 }}>🗑️</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -138,7 +185,7 @@ type Unit = (typeof UNITS)[number];
 
 function ShoppingTab({ navigation }: { navigation: any }) {
   const c = useColors();
-  const { items, addItem, updateItem } = useList();
+  const { items, addItem, updateItem, removeItem } = useList();
 
   const [newName, setNewName] = useState("");
   const [newQty, setNewQty] = useState("1");
@@ -286,6 +333,7 @@ function ShoppingTab({ navigation }: { navigation: any }) {
               key={item.id}
               item={item}
               onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
+              onDelete={() => removeItem(item.id)}
             />
           ))}
         </>
@@ -299,6 +347,7 @@ function ShoppingTab({ navigation }: { navigation: any }) {
               key={item.id}
               item={item}
               onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
+              onDelete={() => removeItem(item.id)}
             />
           ))}
         </>
