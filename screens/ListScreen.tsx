@@ -25,19 +25,31 @@ function ItemRow({
   item,
   onUpdate,
   onDelete,
+  onRename,
 }: {
   item: ListItem;
   onUpdate: (qty: number) => void;
   onDelete: () => void;
+  onRename: (name: string) => void;
 }) {
   const c = useColors();
   const [expanded, setExpanded] = useState(false);
   const [qty, setQty] = useState(String(item.quantity));
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(item.name);
+  const nameInputRef = useRef<TextInput>(null);
 
   const saveQty = () => {
     const n = parseInt(qty, 10);
     if (!isNaN(n) && n > 0) onUpdate(n);
     else setQty(String(item.quantity));
+  };
+
+  const saveName = () => {
+    const trimmed = nameValue.trim();
+    if (trimmed && trimmed !== item.name) onRename(trimmed);
+    else setNameValue(item.name);
+    setEditingName(false);
   };
 
   return (
@@ -46,29 +58,47 @@ function ItemRow({
         s.itemRow,
         {
           backgroundColor: c.bgSurface,
-          borderColor: expanded ? c.accent : c.borderDefault,
+          borderColor: expanded || editingName ? c.accent : c.borderDefault,
         },
       ]}
     >
       <Pressable
         style={s.itemMain}
         onPress={() => {
+          if (editingName) return;
           if (!expanded) setExpanded(true);
           else {
             saveQty();
             setExpanded(false);
           }
         }}
+        onLongPress={() => {
+          setEditingName(true);
+          setTimeout(() => nameInputRef.current?.focus(), 0);
+        }}
       >
-        <Text
-          style={[
-            s.itemName,
-            { color: item.checked ? c.textTertiary : c.text },
-          ]}
-          numberOfLines={1}
-        >
-          {item.name}
-        </Text>
+        {editingName ? (
+          <TextInput
+            ref={nameInputRef}
+            value={nameValue}
+            onChangeText={setNameValue}
+            onBlur={saveName}
+            onSubmitEditing={saveName}
+            selectTextOnFocus
+            returnKeyType="done"
+            style={[s.itemName, { color: c.text, padding: 0 }]}
+          />
+        ) : (
+          <Text
+            style={[
+              s.itemName,
+              { color: item.checked ? c.textTertiary : c.text },
+            ]}
+            numberOfLines={1}
+          >
+            {item.name}
+          </Text>
+        )}
         <Text style={[s.itemQty, { color: c.textTertiary }]}>
           {item.unit === "×"
             ? `×${item.quantity}`
@@ -334,6 +364,7 @@ function ShoppingTab({ navigation }: { navigation: any }) {
               item={item}
               onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
               onDelete={() => removeItem(item.id)}
+              onRename={(name) => updateItem(item.id, { name })}
             />
           ))}
         </>
@@ -348,6 +379,7 @@ function ShoppingTab({ navigation }: { navigation: any }) {
               item={item}
               onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
               onDelete={() => removeItem(item.id)}
+              onRename={(name) => updateItem(item.id, { name })}
             />
           ))}
         </>
