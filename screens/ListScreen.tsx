@@ -294,27 +294,31 @@ function ChecklistTab({ navigation }: { navigation: any }) {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ── Add form (fixed, outside scroll) ── */}
       <View style={as.form}>
-        {/* Row 1 — item name, full width */}
-        <TextInput
-          value={newName}
-          onChangeText={(v) => setNewName(v.slice(0, 48))}
-          placeholder="Item name…"
-          placeholderTextColor={c.textTertiary}
-          returnKeyType="next"
-          style={[
-            as.nameInput,
-            {
-              backgroundColor: c.bgSurface,
-              borderColor: c.borderDefault,
-              color: c.text,
-            },
-          ]}
-        />
-
-        {/* Row 2 — quantity, unit picker, add button */}
-        <View style={as.row2}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: spacing.sm,
+            paddingBottom: spacing.md,
+          }}
+        >
+          <TextInput
+            value={newName}
+            onChangeText={(v) => setNewName(v.slice(0, 48))}
+            placeholder="Item name…"
+            placeholderTextColor={c.textTertiary}
+            returnKeyType="next"
+            style={[
+              as.nameInput,
+              {
+                backgroundColor: c.bgSurface,
+                borderColor: c.borderDefault,
+                color: c.text,
+                flex: 1,
+              },
+            ]}
+          />
           {/* Quantity */}
           <TextInput
             value={newQty}
@@ -385,15 +389,23 @@ function ChecklistTab({ navigation }: { navigation: any }) {
               </View>
             )}
           </View>
-
-          {/* Add button */}
-          <Pressable
-            onPress={handleAdd}
-            style={[as.addBtn, { backgroundColor: c.accent }]}
-          >
-            <Text style={as.addBtnText}>+</Text>
-          </Pressable>
         </View>
+        {/* Add button */}
+        <Pressable
+          onPress={handleAdd}
+          style={[as.addBtn, { backgroundColor: c.accent, width: "100%" }]}
+        >
+          <Text
+            style={{
+              color: c.textOnAccent,
+              fontSize: textSizes.md,
+              fontWeight: "500",
+              textAlign: "center",
+            }}
+          >
+            Add Item
+          </Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -683,7 +695,10 @@ export function ListScreen({
 }
 
 const as = StyleSheet.create({
-  form: { gap: spacing.sm, paddingBottom: spacing.sm },
+  form: {
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
   nameInput: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -691,7 +706,6 @@ const as = StyleSheet.create({
     borderWidth: 0.5,
     fontSize: textSizes.md,
   },
-  row2: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   qtyInput: {
     width: 64,
     paddingVertical: spacing.sm,
@@ -733,7 +747,6 @@ const as = StyleSheet.create({
     justifyContent: "center",
     marginLeft: "auto",
   },
-  addBtnText: { color: "#fff", fontSize: 22, lineHeight: 26 },
 });
 
 const s = StyleSheet.create({
