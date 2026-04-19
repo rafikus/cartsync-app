@@ -304,7 +304,6 @@ function ChecklistTab({ navigation }: { navigation: any }) {
             flexDirection: "row",
             alignItems: "center",
             gap: spacing.sm,
-            paddingBottom: spacing.md,
           }}
         >
           <TextInput
@@ -355,7 +354,7 @@ function ChecklistTab({ navigation }: { navigation: any }) {
               ]}
             >
               <Text style={[as.unitBtnText, { color: c.text }]}>{newUnit}</Text>
-              <Text style={[as.unitChevron, { color: c.textTertiary }]}>▾</Text>
+              {/* <Text style={[as.unitChevron, { color: c.textTertiary }]}>▾</Text> */}
             </Pressable>
 
             {unitOpen && (
@@ -724,12 +723,12 @@ const as = StyleSheet.create({
   unitBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     borderWidth: 0.5,
-    minWidth: 56,
+    minWidth: 42,
   },
   unitBtnText: { fontSize: textSizes.md, fontWeight: "500" },
   unitChevron: { fontSize: 10 },
@@ -741,10 +740,13 @@ const as = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 0.5,
     overflow: "hidden",
-    minWidth: 72,
+    minWidth: 42,
   },
-  dropdownItem: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  dropdownItemText: { fontSize: textSizes.md },
+  dropdownItem: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  dropdownItemText: { fontSize: textSizes.md, textAlign: "center" },
   addBtn: {
     width: 38,
     height: 38,
