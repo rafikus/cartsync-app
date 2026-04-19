@@ -26,24 +26,19 @@ function ItemRow({
   onUpdate,
   onDelete,
   onRename,
+  onUnitChange,
 }: {
   item: ListItem;
   onUpdate: (qty: number) => void;
   onDelete: () => void;
   onRename: (name: string) => void;
+  onUnitChange: (unit: string) => void;
 }) {
   const c = useColors();
   const [expanded, setExpanded] = useState(false);
-  const [qty, setQty] = useState(String(item.quantity));
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(item.name);
   const nameInputRef = useRef<TextInput>(null);
-
-  const saveQty = () => {
-    const n = parseInt(qty, 10);
-    if (!isNaN(n) && n > 0) onUpdate(n);
-    else setQty(String(item.quantity));
-  };
 
   const saveName = () => {
     const trimmed = nameValue.trim();
@@ -68,7 +63,6 @@ function ItemRow({
           if (editingName) return;
           if (!expanded) setExpanded(true);
           else {
-            saveQty();
             setExpanded(false);
           }
         }}
@@ -107,7 +101,12 @@ function ItemRow({
       </Pressable>
 
       {expanded && (
-        <ItemRowExpansion item={item} onUpdate={onUpdate} onDelete={onDelete} />
+        <ItemRowExpansion
+          item={item}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onUnitChange={onUnitChange}
+        />
       )}
     </View>
   );
@@ -117,10 +116,12 @@ function ItemRowExpansion({
   item,
   onUpdate,
   onDelete,
+  onUnitChange,
 }: {
   item: ListItem;
   onUpdate: (qty: number) => void;
   onDelete: () => void;
+  onUnitChange: (unit: string) => void;
 }) {
   const c = useColors();
   const [qty, setQty] = useState(String(item.quantity));
@@ -151,6 +152,7 @@ function ItemRowExpansion({
           onPress={() => {
             const n = Math.max(1, parseInt(qty, 10) - 1);
             setQty(String(n));
+            onUpdate(n);
           }}
           style={[
             s.qtyBtn,
@@ -168,10 +170,15 @@ function ItemRowExpansion({
           onChangeText={setQty}
           onBlur={saveQty}
           keyboardType="numeric"
+          selectTextOnFocus
           style={[s.qtyInput, { color: c.text }]}
         />
         <Pressable
-          onPress={() => setQty((v) => String(parseInt(v, 10) + 1))}
+          onPress={() => {
+            const n = parseInt(qty, 10) + 1;
+            setQty(String(n));
+            onUpdate(n);
+          }}
           style={[
             s.qtyBtn,
             { backgroundColor: c.bgSurface, borderColor: c.borderStrong },
@@ -184,6 +191,46 @@ function ItemRowExpansion({
           </Text>
         </Pressable>
       </View>
+
+      {/* Unit selector */}
+      <View
+        style={[
+          s.qtyEditor,
+          { backgroundColor: c.bgSubtle, borderTopColor: c.borderDefault },
+        ]}
+      >
+        <Text
+          style={[
+            { fontSize: textSizes.xs, flex: 1 },
+            { color: c.textSecondary },
+          ]}
+        >
+          Unit
+        </Text>
+        {UNITS.map((u) => (
+          <Pressable
+            key={u}
+            onPress={() => onUnitChange(u)}
+            style={[
+              s.unitChip,
+              item.unit === u
+                ? { backgroundColor: c.accent, borderColor: c.accent }
+                : { backgroundColor: c.bgSurface, borderColor: c.borderStrong },
+            ]}
+          >
+            <Text
+              style={{
+                fontSize: textSizes.xs,
+                fontWeight: "500",
+                color: item.unit === u ? "#fff" : c.text,
+              }}
+            >
+              {u}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       <View
         style={[
           s.qtyEditor,
@@ -365,6 +412,7 @@ function ShoppingTab({ navigation }: { navigation: any }) {
               onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
               onDelete={() => removeItem(item.id)}
               onRename={(name) => updateItem(item.id, { name })}
+              onUnitChange={(unit) => updateItem(item.id, { unit })}
             />
           ))}
         </>
@@ -380,6 +428,7 @@ function ShoppingTab({ navigation }: { navigation: any }) {
               onUpdate={(qty) => updateItem(item.id, { quantity: qty })}
               onDelete={() => removeItem(item.id)}
               onRename={(name) => updateItem(item.id, { name })}
+              onUnitChange={(unit) => updateItem(item.id, { unit })}
             />
           ))}
         </>
@@ -773,5 +822,13 @@ const s = StyleSheet.create({
     gap: 5,
     marginRight: 6,
     marginBottom: 6,
+  },
+  unitChip: {
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
