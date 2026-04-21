@@ -1,8 +1,8 @@
 # CartSync
 
-## Server Status
+## Server Status 
 
-🔍 **Health Check**: [https://kusy.net/cartsync/health](https://kusy.net/cartsync/health)
+🔍 ![https://kusy.net/cartsync/health](https://kusy.net/cartsync/health)
 
 Check the server status above to ensure the backend is operational before running the app.
 
