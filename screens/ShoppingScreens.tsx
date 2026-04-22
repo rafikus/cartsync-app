@@ -3,6 +3,7 @@ import React, { useRef, useState } from "react";
 import {
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -319,10 +320,11 @@ export function ShoppingScreen({
   const c = useColors();
   const insets = useSafeAreaInsets();
   const store: Store | null = route.params?.store ?? null;
-  const { items, toggleItem, completeTrip, syncState, partnerCheckingId } =
+  const { items, toggleItem, completeTrip, syncState, partnerCheckingId, list, loadList } =
     useList();
   const checkOrderRef = useRef<string[]>([]);
   const isLearned = (store?.tripCount ?? 0) >= 2;
+  const [refreshing, setRefreshing] = useState(false);
 
   const sorted = React.useMemo(() => {
     if (!store || !isLearned) return items;
@@ -360,6 +362,16 @@ export function ShoppingScreen({
     }
   };
 
+  const handleRefresh = async () => {
+    if (!list) return;
+    setRefreshing(true);
+    try {
+      await loadList(list.id);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <View style={[{ flex: 1 }, { backgroundColor: c.bgApp }]}>
       <Header
@@ -383,6 +395,17 @@ export function ShoppingScreen({
           paddingBottom: spacing["4xl"],
           paddingTop: spacing.sm,
         }}
+        bounces={true}
+        alwaysBounceVertical={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={c.accent}
+            colors={[c.accent]}
+            progressViewOffset={0}
+          />
+        }
       >
         {!isLearned && store && (
           <Banner variant="accent">

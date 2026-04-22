@@ -3,6 +3,7 @@ import React, { use, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -265,7 +266,8 @@ type Unit = (typeof UNITS)[number];
 
 function ChecklistTab({ navigation }: { navigation: any }) {
   const c = useColors();
-  const { items, addItem, updateItem, removeItem } = useList();
+  const { items, addItem, updateItem, removeItem, list, loadList } = useList();
+  const [refreshing, setRefreshing] = useState(false);
 
   const [newName, setNewName] = useState("");
   const [newQty, setNewQty] = useState("1");
@@ -293,6 +295,16 @@ function ChecklistTab({ navigation }: { navigation: any }) {
       await addItem(name, qty, newUnit);
     } catch (e: unknown) {
       Alert.alert("Error", e instanceof Error ? e.message : "Failed");
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!list) return;
+    setRefreshing(true);
+    try {
+      await loadList(list.id);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -414,6 +426,17 @@ function ChecklistTab({ navigation }: { navigation: any }) {
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: spacing["3xl"] }}
         keyboardShouldPersistTaps="handled"
+        bounces={true}
+        alwaysBounceVertical={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={c.accent}
+            colors={[c.accent]}
+            progressViewOffset={0}
+          />
+        }
       >
         {unchecked.length === 0 && checked.length === 0 && (
           <EmptyState
@@ -464,7 +487,18 @@ function ChecklistTab({ navigation }: { navigation: any }) {
 
 function HistoryTab() {
   const c = useColors();
-  const { trips } = useList();
+  const { trips, list, loadList } = useList();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!list) return;
+    setRefreshing(true);
+    try {
+      await loadList(list.id);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (!trips.length) {
     return (
@@ -477,7 +511,18 @@ function HistoryTab() {
   }
 
   return (
-    <ScrollView style={{ flex: 1 }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={c.accent}
+          colors={[c.accent]}
+          progressViewOffset={0}
+        />
+      }
+    >
       <SectionLabel>Past trips</SectionLabel>
       {trips.map((trip) => (
         <View
@@ -523,8 +568,9 @@ function HistoryTab() {
 
 function SuggestionsTab() {
   const c = useColors();
-  const { suggestions, addItem, loadSuggestions } = useList();
+  const { suggestions, addItem, loadSuggestions, list, loadList } = useList();
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadSuggestions();
@@ -538,6 +584,17 @@ function SuggestionsTab() {
     } catch {}
   };
 
+  const handleRefresh = async () => {
+    if (!list) return;
+    setRefreshing(true);
+    try {
+      await loadList(list.id);
+      await loadSuggestions();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (!suggestions.length) {
     return (
       <EmptyState
@@ -549,7 +606,20 @@ function SuggestionsTab() {
   }
 
   return (
-    <ScrollView style={{ flex: 1 }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      bounces={true}
+      alwaysBounceVertical={true}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={c.accent}
+          colors={[c.accent]}
+          progressViewOffset={0}
+        />
+      }
+    >
       <SectionLabel>Buy again soon</SectionLabel>
       <View
         style={{
