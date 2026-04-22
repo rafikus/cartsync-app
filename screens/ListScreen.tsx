@@ -598,21 +598,11 @@ function ChecklistTab({ navigation }: { navigation: any }) {
           </View>
         </View>
         {/* Add button */}
-        <Pressable
+        <Btn
+          label="Add Item"
+          variant="primary"
           onPress={handleAdd}
-          style={[as.addBtn, { backgroundColor: c.accent, width: "100%" }]}
-        >
-          <Text
-            style={{
-              color: c.textOnAccent,
-              fontSize: textSizes.md,
-              fontWeight: "500",
-              textAlign: "center",
-            }}
-          >
-            Add Item
-          </Text>
-        </Pressable>
+          />
       </View>
       <ScrollView
         style={{ flex: 1 }}
@@ -1010,9 +1000,6 @@ const as = StyleSheet.create({
   },
   dropdownItemText: { fontSize: textSizes.md, textAlign: "center" },
   addBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: "auto",
