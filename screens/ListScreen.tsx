@@ -2,6 +2,8 @@
 import React, { use, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
+  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,15 +12,205 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AppStackParams } from "../navigation";
 import { useList } from "../context/ListContext";
 import { useAuth } from "../context/AuthContext";
 import { useColors, spacing, radius, text as textSizes } from "../theme";
 import { Header } from "../components/Header";
-import { Btn, EmptyState, SectionLabel } from "../components/ui";
+import { Btn, EmptyState, SectionLabel, Checkbox } from "../components/ui";
 import type { ListItem } from "../services/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const SKIP_DELETE_CONFIRMATION_KEY = "skip_delete_confirmation";
+
+// ── DeleteConfirmModal ────────────────────────────────────────────────────────
+
+function DeleteConfirmModal({
+  visible,
+  itemName,
+  onConfirm,
+  onCancel,
+}: {
+  visible: boolean;
+  itemName: string;
+  onConfirm: (skipFuture: boolean) => void;
+  onCancel: () => void;
+}) {
+  const c = useColors();
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  if (!visible) return null;
+
+  return (
+    <View style={s.modalOverlay}>
+      <View style={[s.modalContent, { backgroundColor: c.bgSurface }]}>
+        <Text style={[s.modalTitle, { color: c.text }]}>Delete item?</Text>
+        <Text style={[s.modalMessage, { color: c.textSecondary }]}>
+          Remove "{itemName}" from the list?
+        </Text>
+
+        <Pressable
+          onPress={() => setDontShowAgain(!dontShowAgain)}
+          style={s.checkboxRow}
+        >
+          <Checkbox checked={dontShowAgain} />
+          <Text style={[s.checkboxLabel, { color: c.textSecondary }]}>
+            Don't ask again
+          </Text>
+        </Pressable>
+
+        <View style={s.modalButtons}>
+          <Pressable
+            onPress={onCancel}
+            style={[
+              s.modalButton,
+              { backgroundColor: c.bgSubtle, borderColor: c.borderDefault },
+            ]}
+          >
+            <Text style={[s.modalButtonText, { color: c.text }]}>Cancel</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onConfirm(dontShowAgain)}
+            style={[s.modalButton, { backgroundColor: c.danger }]}
+          >
+            <Text style={[s.modalButtonText, { color: "#fff" }]}>Delete</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ── SwipeableItemRow ──────────────────────────────────────────────────────────
+
+function SwipeableItemRow({
+  item,
+  expanded,
+  onExpand,
+  onUpdate,
+  onDelete,
+  onRename,
+  onUnitChange,
+}: {
+  item: ListItem;
+  expanded: boolean;
+  onExpand: (id: string | null) => void;
+  onUpdate: (qty: number) => void;
+  onDelete: () => void;
+  onRename: (name: string) => void;
+  onUnitChange: (unit: string) => void;
+}) {
+  const c = useColors();
+  const translateX = useRef(new Animated.Value(0)).current;
+  const [skipConfirmation, setSkipConfirmation] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    SecureStore.getItemAsync(SKIP_DELETE_CONFIRMATION_KEY).then((value) => {
+      setSkipConfirmation(value === "true");
+    });
+  }, []);
+
+  const handleDeleteConfirmation = () => {
+    if (skipConfirmation) {
+      onDelete();
+      return;
+    }
+    setShowModal(true);
+  };
+
+  const handleConfirm = async (skipFuture: boolean) => {
+    if (skipFuture) {
+      await SecureStore.setItemAsync(SKIP_DELETE_CONFIRMATION_KEY, "true");
+      setSkipConfirmation(true);
+    }
+    setShowModal(false);
+    onDelete();
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !expanded,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return !expanded && Math.abs(gestureState.dx) > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Only allow swipe right (positive dx)
+        if (gestureState.dx > 0) {
+          translateX.setValue(Math.min(gestureState.dx, 100));
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > 80) {
+          // Threshold for delete
+          Animated.timing(translateX, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            handleDeleteConfirmation();
+          });
+        } else {
+          // Snap back
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <>
+      <DeleteConfirmModal
+        visible={showModal}
+        itemName={item.name}
+        onConfirm={handleConfirm}
+        onCancel={() => setShowModal(false)}
+      />
+
+      <View style={{ position: "relative", marginBottom: 6 }}>
+        {/* Delete background */}
+        <Animated.View
+          style={[
+            s.deleteBackground,
+            {
+              backgroundColor: c.danger,
+              opacity: translateX.interpolate({
+                inputRange: [0, 100],
+                outputRange: [0, 1],
+                extrapolate: "clamp",
+              }),
+            },
+          ]}
+        >
+          <Text style={{ fontSize: 20, marginLeft: spacing.md }}>🗑️</Text>
+        </Animated.View>
+
+        {/* Swipeable item */}
+        <Animated.View
+          style={{
+            transform: [{ translateX }],
+          }}
+          {...panResponder.panHandlers}
+        >
+          <ItemRow
+            item={item}
+            expanded={expanded}
+            onExpand={onExpand}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onRename={onRename}
+            onUnitChange={onUnitChange}
+          />
+        </Animated.View>
+      </View>
+    </>
+  );
+}
 
 // ── ItemRow ───────────────────────────────────────────────────────────────────
 
@@ -449,7 +641,7 @@ function ChecklistTab({ navigation }: { navigation: any }) {
           <>
             <SectionLabel>{`To get (${unchecked.length})`}</SectionLabel>
             {unchecked.map((item) => (
-              <ItemRow
+              <SwipeableItemRow
                 key={item.id}
                 item={item}
                 expanded={expandedId === item.id}
@@ -466,7 +658,7 @@ function ChecklistTab({ navigation }: { navigation: any }) {
           <>
             <SectionLabel>{`In cart (${checked.length})`}</SectionLabel>
             {checked.map((item) => (
-              <ItemRow
+              <SwipeableItemRow
                 key={item.id}
                 item={item}
                 expanded={expandedId === item.id}
@@ -928,5 +1120,70 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
+  },
+  deleteBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.md,
+    justifyContent: "center",
+    alignItems: "flex-start",
+  },
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+  },
+  modalContent: {
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    marginHorizontal: spacing.xl,
+    minWidth: 280,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: textSizes.lg,
+    fontWeight: "600",
+    marginBottom: spacing.sm,
+  },
+  modalMessage: {
+    fontSize: textSizes.md,
+    marginBottom: spacing.lg,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  checkboxLabel: {
+    fontSize: textSizes.sm,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: textSizes.md,
+    fontWeight: "500",
   },
 });
