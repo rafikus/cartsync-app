@@ -1,0 +1,123 @@
+name: EAS Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app.json'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version-changed: ${{ steps.check.outputs.changed }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if version changed
+        id: check
+        run: |
+          CURRENT_VERSION=$(jq -r '.expo.version' app.json)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          
+          git checkout HEAD~1 -- app.json 2>/dev/null || echo "First commit"
+          PREVIOUS_VERSION=$(jq -r '.expo.version' app.json 2>/dev/null || echo "0.0.0")
+          git checkout HEAD -- app.json
+          
+          echo "Current version: $CURRENT_VERSION"
+          echo "Previous version: $PREVIOUS_VERSION"
+          
+          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Version unchanged"
+          fi
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build APK
+        run: eas build --platform android --profile production --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Wait for build to complete
+        id: build
+        run: |
+          # Get the latest build ID
+          BUILD_ID=$(eas build:list --platform android --status in-progress --limit 1 --json --non-interactive | jq -r '.[0].id')
+          echo "Build ID: $BUILD_ID"
+          
+          # Wait for build to complete (check every 60 seconds)
+          while true; do
+            STATUS=$(eas build:view $BUILD_ID --json | jq -r '.status')
+            echo "Build status: $STATUS"
+            
+            if [ "$STATUS" = "finished" ]; then
+              echo "Build completed successfully"
+              APK_URL=$(eas build:view $BUILD_ID --json | jq -r '.artifacts.buildUrl')
+              echo "apk-url=$APK_URL" >> $GITHUB_OUTPUT
+              break
+            elif [ "$STATUS" = "errored" ] || [ "$STATUS" = "canceled" ]; then
+              echo "Build failed with status: $STATUS"
+              exit 1
+            fi
+            
+            sleep 60
+          done
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Download APK
+        run: |
+          curl -L -o CartSync-v${{ needs.check-version.outputs.version }}.apk "${{ steps.build.outputs.apk-url }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: Release v${{ needs.check-version.outputs.version }}
+          body: |
+            ## CartSync v${{ needs.check-version.outputs.version }}
+            
+            ### Installation
+            Download the APK file below and install it on your Android device.
+            
+            **Note:** You may need to enable "Install from Unknown Sources" in your device settings.
+          files: |
+            CartSync-v${{ needs.check-version.outputs.version }}.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
