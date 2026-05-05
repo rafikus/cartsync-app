@@ -13,6 +13,8 @@ import {
   RegisterScreen,
   LoginScreen,
   JoinScreen,
+  ForgotPasswordScreen,
+  ResetPasswordScreen,
 } from "../screens/AuthScreens";
 import { ListScreen } from "../screens/ListScreen";
 import {
@@ -35,6 +37,8 @@ export type AuthStackParams = {
   Register: undefined;
   Login: undefined;
   Join: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: { email: string };
 };
 
 export type AppStackParams = {
@@ -60,6 +64,8 @@ function AuthNavigator() {
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Join" component={JoinScreen} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </AuthStack.Navigator>
   );
 }

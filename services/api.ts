@@ -122,6 +122,10 @@ export const authApi = {
   login: (email: string, password: string) =>
     post<AuthResponse>("/auth/login", { email, password }),
   me: () => get<User>("/auth/me"),
+  requestPasswordReset: (email: string) =>
+    post<{ message: string }>("/auth/password-reset/request", { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    post<{ message: string }>("/auth/password-reset/confirm", { token, newPassword }),
 };
 
 // ── Lists ─────────────────────────────────────────────────────────────────────
