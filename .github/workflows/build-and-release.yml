@@ -68,34 +68,70 @@ jobs:
         run: pnpm install
 
       - name: Build APK
-        run: eas build --platform android --profile production --non-interactive --no-wait
+        id: start-build
+        run: |
+          BUILD_OUTPUT=$(eas build --platform android --profile production --non-interactive --no-wait 2>&1)
+          echo "$BUILD_OUTPUT"
+          
+          # Extract build ID from output
+          BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -oP 'https://expo.dev/accounts/[^/]+/projects/[^/]+/builds/\K[a-f0-9-]+' | head -1)
+          
+          if [ -z "$BUILD_ID" ]; then
+            # Fallback: get the most recent build for this platform
+            echo "Could not extract build ID from output, fetching latest build..."
+            sleep 5
+            BUILD_ID=$(eas build:list --platform android --limit 1 --json --non-interactive | jq -r '.[0].id')
+          fi
+          
+          echo "Build ID: $BUILD_ID"
+          echo "build-id=$BUILD_ID" >> $GITHUB_OUTPUT
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Wait for build to complete
         id: build
         run: |
-          # Get the latest build ID
-          BUILD_ID=$(eas build:list --platform android --status in-progress --limit 1 --json --non-interactive | jq -r '.[0].id')
-          echo "Build ID: $BUILD_ID"
+          BUILD_ID="${{ steps.start-build.outputs.build-id }}"
           
-          # Wait for build to complete (check every 60 seconds)
-          while true; do
-            STATUS=$(eas build:view $BUILD_ID --json | jq -r '.status')
-            echo "Build status: $STATUS"
+          if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
+            echo "Error: No build ID found"
+            exit 1
+          fi
+          
+          echo "Monitoring build: $BUILD_ID"
+          
+          # Wait for build to complete (check every 30 seconds)
+          MAX_WAIT=7200  # 2 hours
+          ELAPSED=0
+          
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            BUILD_INFO=$(eas build:view $BUILD_ID --json 2>&1)
+            STATUS=$(echo "$BUILD_INFO" | jq -r '.status' 2>/dev/null || echo "unknown")
+            
+            echo "Build status: $STATUS (elapsed: ${ELAPSED}s)"
             
             if [ "$STATUS" = "finished" ]; then
               echo "Build completed successfully"
-              APK_URL=$(eas build:view $BUILD_ID --json | jq -r '.artifacts.buildUrl')
+              APK_URL=$(echo "$BUILD_INFO" | jq -r '.artifacts.buildUrl')
+              echo "APK URL: $APK_URL"
               echo "apk-url=$APK_URL" >> $GITHUB_OUTPUT
               break
             elif [ "$STATUS" = "errored" ] || [ "$STATUS" = "canceled" ]; then
               echo "Build failed with status: $STATUS"
+              echo "$BUILD_INFO" | jq '.'
               exit 1
+            elif [ "$STATUS" = "unknown" ]; then
+              echo "Warning: Could not fetch build status"
             fi
             
-            sleep 60
+            sleep 30
+            ELAPSED=$((ELAPSED + 30))
           done
+          
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo "Build timed out after ${MAX_WAIT}s"
+            exit 1
+          fi
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
